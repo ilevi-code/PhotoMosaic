@@ -1,5 +1,5 @@
 __pycache__/
 .idea
-meta.json
+_cache/
 
 *.png
