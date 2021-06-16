@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 from itertools import chain
 
+import tqdm
 from PIL import Image
 from math import sqrt
 import test
@@ -72,7 +73,7 @@ def main():
 
     test_image = orig.resize((GRID_WIDTH * ACCURACY, GRID_HEIGHT * ACCURACY))
     mozaicd = Image.new('RGBA', orig.size)
-    for i in range(GRID_WIDTH):
+    for i in tqdm.trange(GRID_WIDTH):
         for j in range(GRID_HEIGHT):
             # START_X, START_Y, END_X, END_Y
             cropped = test_image.crop(
