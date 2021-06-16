@@ -9,22 +9,24 @@ from PIL import Image
 from cache import Cache
 from color_utils import color_distance
 
-MAIN_IMAGE = 'main.png'
-
 ACCURACY = 3
 
 
 class Mosaic:
     def __init__(self, dir_path, cache: Cache):
         self.dir_path = dir_path
+        self.cache = cache
         self.image_data = cache.load_image_metadata()
 
-    def assemble(self, orignal, cols, rows) -> Image:
-        mini_width = orignal.size[0] // cols
-        mini_height = orignal.size[1] // rows
+    def create_mosaic(self, original, cols, rows, output_file=None) -> Image:
+        if output_file is None:
+            output_file = f'output-{self.cache.suffix}.{original.format}'
 
-        test_image = orignal.resize((cols * ACCURACY, rows * ACCURACY))
-        output = Image.new('RGBA', orignal.size)
+        mini_width = original.size[0] // cols
+        mini_height = original.size[1] // rows
+
+        test_image = original.resize((cols * ACCURACY, rows * ACCURACY))
+        output = Image.new('RGBA', original.size)
         for i in tqdm.trange(cols):
             for j in range(rows):
                 # START_X, START_Y, END_X, END_Y
@@ -36,7 +38,7 @@ class Mosaic:
                 paste_point = (i * mini_width, j * mini_height)
                 resized = Image.open(best_match_name).resize((mini_width, mini_height))
                 output.paste(resized, paste_point)
-        return output
+        output.save(output_file)
 
     def find_match(self, beeg_data: List[List[int]], threshold=250) -> str:
         highest = ('', None)
@@ -69,16 +71,18 @@ def str_to_path(ctx, param, value):
 @click.option('-r', '--rows', type=click.INT, default=35, help='Mini-pictures rows')
 @click.option('-i', '--input-dir', type=click.Path(file_okay=False, exists=True), default='pics',
               help='Directory of images to use', callback=str_to_path)
-@click.option('-m', '--output-dim-multiplier', type=click.INT, default=1)
-def main(cols: int, rows: int, input_dir: click.Path):
-    orig = Image.open(MAIN_IMAGE)
-    orig = orig.resize((orig.size[0] * 3, orig.size[1] * 3))
+@click.option('-m', '--main-picture', type=click.Path(dir_okay=False, exists=True), default='main.png',
+              help='The file of the large picture')
+@click.option('-m', '--output-dim-multiplier', type=click.INT, default=1, help='Multiply output image size')
+def main(cols: int, rows: int, input_dir: click.Path, main_picture: click.Path, output_dim_multiplier):
+    orig = Image.open(main_picture)
+    orig = orig.resize((orig.size[0] * output_dim_multiplier, orig.size[1] * output_dim_multiplier))
 
     cache = Cache(input_dir, cols, rows, ACCURACY, orig.size[1] / orig.size[0])
-    cache.setup()
+    cache.create()
 
     matcher = Mosaic(input_dir, cache)
-    matcher.assemble(orig, cols, rows).save(f'output-{cache.suffix}.png')
+    matcher.create_mosaic(orig, cols, rows)
 
 
 if __name__ == "__main__":

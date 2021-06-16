@@ -16,7 +16,7 @@ class Cache:
         self.suffix = f'{self.cols}-{self.rows}-{self.accuracy}'
         self._CROPPED_DIR = self._CACHE_DIR / f'cropped-{self.suffix}'
 
-    def setup(self):
+    def create(self):
         self._CACHE_DIR.mkdir(exist_ok=True)
         self._CROPPED_DIR.mkdir(exist_ok=True)
         self._crop_all()
