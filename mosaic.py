@@ -1,4 +1,5 @@
 import json
+import random
 from pathlib import Path
 from typing import List
 from itertools import chain
@@ -13,18 +14,21 @@ DIR = './pics/'
 THUMBNAIL_DIR = './thmbs'
 MAIN_IMAGE = 'main.png'
 
-GRID_WIDTH = 34
-GRID_HEIGHT = 20
+GRID_WIDTH = 50
+GRID_HEIGHT = 30
 ACCURACY = 3
 
 
 def color_distance(color1, color2):
+    """
+    Good image score is about 50
+    """
     rdiff = color1[0] - color2[0]
     gdiff = color1[1] - color2[1]
     bdiff = color1[2] - color2[2]
     rmean = (color1[0] + color2[0]) // 2
     # WTF https://stackoverflow.com/a/8863952
-    return sqrt((((512 + rmean) * rdiff * rdiff) >> 8) + 4 * gdiff * gdiff + (((767 - rmean) * bdiff * bdiff) >> 8))
+    return sqrt((((512 + rmean) * rdiff * rdiff) >> 8) + 4 * gdiff * gdiff + (((767 - rmean) * bdiff * bdiff) >> 8)) - handicap
 
 
 class ImageSet:
@@ -46,15 +50,19 @@ class ImageSet:
         with open(METADATA_PATH, 'w') as meta_file:
             json.dump(output, meta_file)
 
-    def find_match(self, beeg_data: List[List[int]]):
+    def find_match(self, beeg_data: List[List[int]], threshold=250):
         highest = ('', None)
+        possible_matches = []
 
         for name, smol_data in self.image_data.items():
             if (score := self.match_score(beeg_data, smol_data)) < (highest[1] or score + 1):
                 highest = (name, score)
+            if score < threshold:
+                possible_matches.append(name)
 
-        self.image_data.pop(highest[0])
-        return highest[0]
+        if len(possible_matches) > 2:
+            return random.choice(possible_matches)
+        return self.find_match(beeg_data, threshold+100)
 
     @staticmethod
     def match_score(data1, data2):
