@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from pathlib import Path
 from typing import List
@@ -29,7 +30,8 @@ def color_distance(color1, color2):
     bdiff = color1[2] - color2[2]
     rmean = (color1[0] + color2[0]) // 2
     # WTF https://stackoverflow.com/a/8863952
-    return sqrt((((512 + rmean) * rdiff * rdiff) >> 8) + 4 * gdiff * gdiff + (((767 - rmean) * bdiff * bdiff) >> 8)) - handicap
+    return sqrt(
+        (((512 + rmean) * rdiff * rdiff) >> 8) + 4 * gdiff * gdiff + (((767 - rmean) * bdiff * bdiff) >> 8)) - handicap
 
 
 class ImageSet:
@@ -63,7 +65,7 @@ class ImageSet:
 
         if len(possible_matches) > 2:
             return random.choice(possible_matches)
-        return self.find_match(beeg_data, threshold+100)
+        return self.find_match(beeg_data, threshold + 100)
 
     @staticmethod
     def match_score(data1, data2):
@@ -71,6 +73,34 @@ class ImageSet:
         for i, j in zip(data1, data2):
             score += color_distance(i, j)
         return score
+
+
+def _crop_to_fit(image_name: str, desired_ratio) -> Image:
+    with Image.open(image_name) as image:
+        width, height = image.size
+        current_ratio = width / height
+        if current_ratio < desired_ratio:
+            # image too high
+            desired_height = height * current_ratio / desired_ratio
+            height_diff = (height - desired_height) // 2
+            cropped = image.crop((0, height_diff, width, height - height_diff))
+        else:
+            # image too wide
+            desired_width = width * desired_ratio / current_ratio
+            width_diff = (width - desired_width) // 2
+            cropped = image.crop((width_diff, 0, width - width_diff, height))
+        return cropped
+
+
+def crop_to_fit(image_name: str, desired_ratio) -> Image:
+    Path('cropped').mkdir(exist_ok=True)
+    cropped_path = Path('cropped') / Path(image_name).name
+    if cropped_path.exists():
+        return Image.open(cropped_path)
+    else:
+        cropped = _crop_to_fit(image_name, desired_ratio)
+        cropped.save(cropped_path)
+        return cropped
 
 
 def main():
@@ -91,7 +121,7 @@ def main():
             )
             best_match_name = set.find_match(cropped.getdata())
             paste_point = (i * mini_width, j * mini_height)
-            resized = Image.open(best_match_name).resize((mini_width, mini_height))
+            resized = crop_to_fit(best_match_name, mini_width / mini_height).resize((mini_width, mini_height))
             mozaicd.paste(resized, paste_point)
     mozaicd.save('here.png')
 
