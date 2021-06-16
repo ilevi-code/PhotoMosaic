@@ -1,10 +1,6 @@
-import json
 import random
-from itertools import chain
-from math import sqrt
 from pathlib import Path
 from typing import List
-import operator
 
 import click
 import tqdm
@@ -69,9 +65,11 @@ def str_to_path(ctx, param, value):
 
 
 @click.command()
-@click.option('-c', '--cols', type=click.INT, default=70, help='Mini-pictures columns')
-@click.option('-r', '--rows', type=click.INT, default=50, help='Mini-pictures rows')
-@click.option('-i', '--input-dir', type=click.Path(file_okay=False, exists=True), default='pics', help='', callback=str_to_path) # TODO
+@click.option('-c', '--cols', type=click.INT, default=50, help='Mini-pictures columns')
+@click.option('-r', '--rows', type=click.INT, default=35, help='Mini-pictures rows')
+@click.option('-i', '--input-dir', type=click.Path(file_okay=False, exists=True), default='pics',
+              help='Directory of images to use', callback=str_to_path)
+@click.option('-m', '--output-dim-multiplier', type=click.INT, default=1)
 def main(cols: int, rows: int, input_dir: click.Path):
     orig = Image.open(MAIN_IMAGE)
     orig = orig.resize((orig.size[0] * 3, orig.size[1] * 3))
@@ -79,9 +77,8 @@ def main(cols: int, rows: int, input_dir: click.Path):
     cache = Cache(input_dir, cols, rows, ACCURACY, orig.size[1] / orig.size[0])
     cache.setup()
 
-    set = Mosaic(input_dir, cache)
-
-    set.assemble(orig, cols, rows).save(f'output-{cache.suffix}.png')
+    matcher = Mosaic(input_dir, cache)
+    matcher.assemble(orig, cols, rows).save(f'output-{cache.suffix}.png')
 
 
 if __name__ == "__main__":
